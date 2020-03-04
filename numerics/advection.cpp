@@ -103,8 +103,45 @@ struct stage_horizontal {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    auto flx = gridtools::call<stage_u, full_t>::with(eval, u(), in(), dx());
-    auto fly = gridtools::call<stage_v, full_t>::with(eval, v(), in(), dy());
+    //auto flx = gridtools::call<stage_u, full_t>::with(eval, u(), in(), dx());
+    //auto fly = gridtools::call<stage_v, full_t>::with(eval, v(), in(), dy());
+    static constexpr real_t weights[] = {1_r / 30, -1_r / 4, 1_r,
+                                         -1_r / 3, -1_r / 2, 1_r / 20};
+    real_t flx, fly;
+    if (eval(u()) > 0_r) {
+      flx =
+          eval(u() *
+               -(weights[0] * in(-3, 0, 0) + weights[1] * in(-2, 0, 0) +
+                 weights[2] * in(-1, 0, 0) + weights[3] * in() +
+                 weights[4] * in(1, 0, 0) + weights[5] * in(2, 0, 0)) /
+               dx());
+    } else if (eval(u()) < 0_r) {
+      flx =
+          eval(u() *
+               (weights[5] * in(-2, 0, 0) + weights[4] * in(-1, 0, 0) +
+                weights[3] * in() + weights[2] * in(1, 0, 0) +
+                weights[1] * in(2, 0, 0) + weights[0] * in(3, 0, 0)) /
+               dx());
+    } else {
+      flx = 0_r;
+    }
+    if (eval(v()) > 0_r) {
+      fly =
+          eval(v() *
+               -(weights[0] * in(0, -3, 0) + weights[1] * in(0, -2, 0) +
+                 weights[2] * in(0, -1, 0) + weights[3] * in() +
+                 weights[4] * in(0, 1, 0) + weights[5] * in(0, 2, 0)) /
+               dy());
+    } else if (eval(v()) < 0_r) {
+      fly =
+          eval(v() *
+               (weights[5] * in(0, -2, 0) + weights[4] * in(0, -1, 0) +
+                weights[3] * in() + weights[2] * in(0, 1, 0) +
+                weights[1] * in(0, 2, 0) + weights[0] * in(0, 3, 0)) /
+               dy());
+    } else {
+      fly = 0_r;
+    }
 
     eval(out()) = eval(in() - dt() * (flx + fly));
   }
@@ -154,9 +191,12 @@ struct stage_advection_w_forward1 {
     eval(beta()) = eval(a());
     eval(gamma()) = eval(-b());
 
-    gridtools::call_proc<tridiagonal::periodic_forward1,
-                         full_t::first_level>::with(eval, a(), b(), c(), d(),
-                                                    alpha(), beta(), gamma());
+    //gridtools::call_proc<tridiagonal::periodic_forward1,
+                         //full_t::first_level>::with(eval, a(), b(), c(), d(),
+                                                    //alpha(), beta(), gamma());
+    eval(b()) -= eval(gamma());
+    eval(c()) = eval(c()) / eval(b());
+    eval(d()) = eval(d()) / eval(b());
 
     eval(data_tmp()) = eval(data());
   }
@@ -170,9 +210,11 @@ struct stage_advection_w_forward1 {
                      0.25_r * w(0, 0, 1) * (data(0, 0, 1) - data()) / dz() -
                      0.25_r * w() * (data() - data(0, 0, -1)) / dz());
 
-    gridtools::call_proc<tridiagonal::periodic_forward1,
-                         full_t::modify<1, -1>>::with(eval, a(), b(), c(), d(),
-                                                      alpha(), beta(), gamma());
+    //gridtools::call_proc<tridiagonal::periodic_forward1,
+                         //full_t::modify<1, -1>>::with(eval, a(), b(), c(), d(),
+                                                      //alpha(), beta(), gamma());
+    eval(c()) = eval(c() / (b() - c(0, 0, -1) * a()));
+    eval(d()) = eval((d() - a() * d(0, 0, -1)) / (b() - c(0, 0, -1) * a()));
   }
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
@@ -183,33 +225,19 @@ struct stage_advection_w_forward1 {
                      0.25_r * w(0, 0, 1) * (data_tmp() - data()) / dz() -
                      0.25_r * w() * (data() - data(0, 0, -1)) / dz());
 
-    gridtools::call_proc<tridiagonal::periodic_forward1,
-                         full_t::last_level>::with(eval, a(), b(), c(), d(),
-                                                   alpha(), beta(), gamma());
+    //gridtools::call_proc<tridiagonal::periodic_forward1,
+                         //full_t::last_level>::with(eval, a(), b(), c(), d(),
+                                                   //alpha(), beta(), gamma());
+    eval(b()) -= eval(alpha() * beta() / gamma());
+    eval(c()) = eval(c() / (b() - c(0, 0, -1) * a()));
+    eval(d()) = eval((d() - a() * d(0, 0, -1)) / (b() - c(0, 0, -1) * a()));
   }
 };
 
 using stage_advection_w_backward1 = tridiagonal::periodic_backward1;
 using stage_advection_w_forward2 = tridiagonal::periodic_forward2;
 using stage_advection_w_backward2 = tridiagonal::periodic_backward2;
-
-struct stage_advection_w3 {
-  using out = inout_accessor<0>;
-  using x = in_accessor<1>;
-  using z = in_accessor<2>;
-  using fact = in_accessor<3>;
-  using in = in_accessor<4>;
-
-  using dt = in_accessor<5>;
-
-  using param_list = make_param_list<out, x, z, fact, in, dt>;
-
-  template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    gridtools::call_proc<tridiagonal::periodic3, full_t>::with(eval, out(), x(),
-                                                               z(), fact());
-  }
-};
+using stage_advection_w3 = tridiagonal::periodic3;
 
 struct stage_advection_w3_rk {
   using out = inout_accessor<0>;
@@ -230,10 +258,48 @@ struct stage_advection_w3_rk {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    auto vout = gridtools::call<tridiagonal::periodic3, full_t>::with(
-        eval, x(), z(), fact());
-    auto flx = gridtools::call<stage_u, full_t>::with(eval, u(), in(), dx());
-    auto fly = gridtools::call<stage_v, full_t>::with(eval, v(), in(), dy());
+    //auto vout = gridtools::call<tridiagonal::periodic3, full_t>::with(
+        //eval, x(), z(), fact());
+    real_t vout = eval(x() - fact() * z());
+    //auto flx = gridtools::call<stage_u, full_t>::with(eval, u(), in(), dx());
+    //auto fly = gridtools::call<stage_v, full_t>::with(eval, v(), in(), dy());
+    static constexpr real_t weights[] = {1_r / 30, -1_r / 4, 1_r,
+                                         -1_r / 3, -1_r / 2, 1_r / 20};
+    real_t flx, fly;
+    if (eval(u()) > 0_r) {
+      flx =
+          eval(u() *
+               -(weights[0] * in(-3, 0, 0) + weights[1] * in(-2, 0, 0) +
+                 weights[2] * in(-1, 0, 0) + weights[3] * in() +
+                 weights[4] * in(1, 0, 0) + weights[5] * in(2, 0, 0)) /
+               dx());
+    } else if (eval(u()) < 0_r) {
+      flx =
+          eval(u() *
+               (weights[5] * in(-2, 0, 0) + weights[4] * in(-1, 0, 0) +
+                weights[3] * in() + weights[2] * in(1, 0, 0) +
+                weights[1] * in(2, 0, 0) + weights[0] * in(3, 0, 0)) /
+               dx());
+    } else {
+      flx = 0_r;
+    }
+    if (eval(v()) > 0_r) {
+      fly =
+          eval(v() *
+               -(weights[0] * in(0, -3, 0) + weights[1] * in(0, -2, 0) +
+                 weights[2] * in(0, -1, 0) + weights[3] * in() +
+                 weights[4] * in(0, 1, 0) + weights[5] * in(0, 2, 0)) /
+               dy());
+    } else if (eval(v()) < 0_r) {
+      fly =
+          eval(v() *
+               (weights[5] * in(0, -2, 0) + weights[4] * in(0, -1, 0) +
+                weights[3] * in() + weights[2] * in(0, 1, 0) +
+                weights[1] * in(0, 2, 0) + weights[0] * in(0, 3, 0)) /
+               dy());
+    } else {
+      fly = 0_r;
+    }
     eval(out()) = eval(in0() - dt() * (flx + fly) + (vout - in()));
   }
 };
@@ -310,8 +376,7 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
                                   p_gamma(), p_fact(), p_z_top(), p_x_top())),
           gt::make_multistage(gt::execute::parallel(),
                               gt::make_stage<stage_advection_w3>(
-                                  p_data_out(), p_x(), p_z(), p_fact(),
-                                  p_data_in(), p_dt())))) {}
+                                  p_data_out(), p_x(), p_z(), p_fact())))) {}
 
 void vertical::operator()(storage_t &out, storage_t const &in,
                           storage_t const &w, real_t dt) {

@@ -112,9 +112,12 @@ struct stage_diffusion_w_forward1 {
     eval(alpha()) = eval(beta()) = eval(-coeff() / (2_r * dz() * dz()));
     eval(gamma()) = eval(-b());
 
-    gridtools::call_proc<tridiagonal::periodic_forward1,
-                         full_t::first_level>::with(eval, a(), b(), c(), d(),
-                                                    alpha(), beta(), gamma());
+    //gridtools::call_proc<tridiagonal::periodic_forward1,
+                         //full_t::first_level>::with(eval, a(), b(), c(), d(),
+                                                    //alpha(), beta(), gamma());
+    eval(b()) -= eval(gamma());
+    eval(c()) = eval(c()) / eval(b());
+    eval(d()) = eval(d()) / eval(b());
 
     eval(data_tmp()) = eval(data());
   }
@@ -128,9 +131,11 @@ struct stage_diffusion_w_forward1 {
              0.5_r * coeff() * (data(0, 0, -1) - 2_r * data() + data(0, 0, 1)) /
                  (dz() * dz()));
 
-    gridtools::call_proc<tridiagonal::periodic_forward1,
-                         full_t::modify<1, -1>>::with(eval, a(), b(), c(), d(),
-                                                      alpha(), beta(), gamma());
+    //gridtools::call_proc<tridiagonal::periodic_forward1,
+                         //full_t::modify<1, -1>>::with(eval, a(), b(), c(), d(),
+                                                      //alpha(), beta(), gamma());
+    eval(c()) = eval(c() / (b() - c(0, 0, -1) * a()));
+    eval(d()) = eval((d() - a() * d(0, 0, -1)) / (b() - c(0, 0, -1) * a()));
   }
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
@@ -140,33 +145,19 @@ struct stage_diffusion_w_forward1 {
         eval(1_r / dt() * data() +
              0.5_r * coeff() * (data(0, 0, -1) - 2_r * data() + data_tmp()) /
                  (dz() * dz()));
-    gridtools::call_proc<tridiagonal::periodic_forward1,
-                         full_t::last_level>::with(eval, a(), b(), c(), d(),
-                                                   alpha(), beta(), gamma());
+    //gridtools::call_proc<tridiagonal::periodic_forward1,
+                         //full_t::last_level>::with(eval, a(), b(), c(), d(),
+                                                   //alpha(), beta(), gamma());
+    eval(b()) -= eval(alpha() * beta() / gamma());
+    eval(c()) = eval(c() / (b() - c(0, 0, -1) * a()));
+    eval(d()) = eval((d() - a() * d(0, 0, -1)) / (b() - c(0, 0, -1) * a()));
   }
 };
 
 using stage_diffusion_w_backward1 = tridiagonal::periodic_backward1;
 using stage_diffusion_w_forward2 = tridiagonal::periodic_forward2;
 using stage_diffusion_w_backward2 = tridiagonal::periodic_backward2;
-
-struct stage_diffusion_w3 {
-  using out = inout_accessor<0>;
-  using x = in_accessor<1>;
-  using z = in_accessor<2>;
-  using fact = in_accessor<3>;
-  using in = in_accessor<4>;
-
-  using dt = in_accessor<5>;
-
-  using param_list = make_param_list<out, x, z, fact, in, dt>;
-
-  template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    gridtools::call_proc<tridiagonal::periodic3, full_t>::with(eval, out(), x(),
-                                                               z(), fact());
-  }
-};
+using stage_diffusion_w3 = tridiagonal::periodic3;
 
 } // namespace
 
@@ -238,8 +229,7 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
                                   p_gamma(), p_fact(), p_z_top(), p_x_top())),
           gt::make_multistage(gt::execute::parallel(),
                               gt::make_stage<stage_diffusion_w3>(
-                                  p_data_out(), p_x(), p_z(), p_fact(),
-                                  p_data_in(), p_dt())))) {}
+                                  p_data_out(), p_x(), p_z(), p_fact())))) {}
 
 void vertical::operator()(storage_t &out, storage_t const &in, real_t dt) {
   comp_.run(p_data_out() = out, p_data_in() = in,
