@@ -167,22 +167,6 @@ struct stage_diffusion_w3 {
 
 } // namespace
 
-/*horizontal::horizontal(vec<std::size_t, 3> const &resolution,
-                       vec<real_t, 3> const &delta, real_t coeff)
-    : comp_(gt::make_computation<backend_t>(
-          computation_grid(resolution.x, resolution.y, resolution.z),
-          p_dx() = gt::make_global_parameter(delta.x),
-          p_dy() = gt::make_global_parameter(delta.y),
-          p_coeff() = gt::make_global_parameter(coeff),
-          gt::make_multistage(
-              gt::execute::parallel(),
-              gt::make_stage<stage_horizontal>(p_out(), p_in(), p_dx(), p_dy(),
-                                               p_dt(), p_coeff())))) {}
-
-void horizontal::operator()(storage_t &out, storage_t const &in, real_t dt) {
-  comp_.run(p_out() = out, p_in() = in, p_dt() = gt::make_global_parameter(dt));
-}*/
-
 std::function<void(storage_t, storage_t, real_t dt)>
 horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
            real_t coeff) {
@@ -195,66 +179,6 @@ horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
         gt::make_global_parameter(dt), gt::make_global_parameter(coeff));
   };
 }
-
-/*vertical::vertical(vec<std::size_t, 3> const &resolution,
-                   vec<real_t, 3> const &delta, real_t coeff)
-    : sinfo_ij_(resolution.x + 2 * halo, resolution.y + 2 * halo, 1),
-      alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
-      gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
-      data_in_tmp_(sinfo_ij_, "data_in_tmp"), z_top_(sinfo_ij_, "z_top"),
-      x_top_(sinfo_ij_, "x_top"),
-      comp_(gt::make_computation<backend_t>(
-          computation_grid(resolution.x, resolution.y, resolution.z),
-          p_dz() = gt::make_global_parameter(delta.z),
-          p_coeff() = gt::make_global_parameter(coeff), p_alpha() = alpha_,
-          p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
-          p_data_in_tmp() = data_in_tmp_, p_z_top() = z_top_,
-          p_x_top() = x_top_,
-          gt::make_multistage(
-              gt::execute::forward(),
-              gt::make_stage<stage_diffusion_w0>(p_data_in(), p_data_in_tmp())),
-          gt::make_multistage(
-              gt::execute::forward(),
-              gt::define_caches(
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_a()),
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_b()),
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_c()),
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_d())),
-              gt::make_stage<stage_diffusion_w_forward1>(
-                  p_alpha(), p_beta(), p_gamma(), p_a(), p_b(), p_c(), p_d(),
-                  p_data_in(), p_data_in_tmp(), p_dz(), p_dt(), p_coeff())),
-          gt::make_multistage(
-              gt::execute::backward(),
-              gt::define_caches(
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_x())),
-              gt::make_stage<stage_diffusion_w_backward1>(p_x(), p_c(), p_d())),
-          gt::make_multistage(
-              gt::execute::forward(),
-              gt::define_caches(
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_c()),
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_d())),
-              gt::make_stage<stage_diffusion_w_forward2>(
-                  p_a(), p_b(), p_c(), p_d(), p_alpha(), p_gamma())),
-          gt::make_multistage(gt::execute::backward(),
-                              gt::make_stage<stage_diffusion_w_backward2>(
-                                  p_z(), p_c(), p_d(), p_x(), p_beta(),
-                                  p_gamma(), p_fact(), p_z_top(), p_x_top())),
-          gt::make_multistage(gt::execute::parallel(),
-                              gt::make_stage<stage_diffusion_w3>(
-                                  p_data_out(), p_x(), p_z(), p_fact(),
-                                  p_data_in(), p_dt())))) {}
-
-void vertical::operator()(storage_t &out, storage_t const &in, real_t dt) {
-  comp_.run(p_data_out() = out, p_data_in() = in,
-            p_dt() = gt::make_global_parameter(dt));
-}*/
 
 std::function<void(storage_t, storage_t, real_t dt)>
 vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
