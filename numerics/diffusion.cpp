@@ -184,16 +184,16 @@ std::function<void(storage_t, storage_t, real_t dt)>
 vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
          real_t coeff) {
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
-  auto const spec = [](auto out, auto in, auto in_tmp, auto alpha, auto beta,
-                       auto gamma, auto fact, auto x_top, auto z_top, auto dz,
+  auto const spec = [](auto out, auto in, auto alpha, auto beta, auto gamma,
+                       auto fact, auto in_top, auto x_top, auto z_top, auto dz,
                        auto dt, auto coeff) {
     GT_DECLARE_TMP(real_t, a, b, c, d, z, x);
     return gt::multi_pass(
-        gt::execute_forward().stage(stage_diffusion_w0(), in, in_tmp),
+        gt::execute_forward().stage(stage_diffusion_w0(), in, in_top),
         gt::execute_forward()
             .k_cached(gt::cache_io_policy::flush(), a, b, c, d)
             .stage(stage_diffusion_w_forward1(), alpha, beta, gamma, a, b, c, d,
-                   in, in_tmp, dz, dt, coeff),
+                   in, in_top, dz, dt, coeff),
         gt::execute_backward()
             .k_cached(gt::cache_io_policy::flush(), x)
             .stage(stage_diffusion_w_backward1(), x, c, d),
@@ -212,21 +212,21 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
     .halos(halo, halo)
     .dimensions(resolution.x + 2 * halo, resolution.y + 2 * halo);
 
-  auto in_tmp = ij_slice();
   auto alpha = ij_slice();
   auto beta = ij_slice();
   auto gamma = ij_slice();
   auto fact = ij_slice();
+  auto in_top = ij_slice();
   auto x_top = ij_slice();
   auto z_top = ij_slice();
 
   return [grid = std::move(grid), spec = std::move(spec),
-          in_tmp = std::move(in_tmp), alpha = std::move(alpha),
-          beta = std::move(beta), gamma = std::move(gamma),
-          fact = std::move(fact), x_top = std::move(x_top),
+          alpha = std::move(alpha), beta = std::move(beta),
+          gamma = std::move(gamma), fact = std::move(fact),
+          in_top = std::move(in_top), x_top = std::move(x_top),
           z_top = std::move(z_top), delta,
           coeff](storage_t out, storage_t in, real_t dt) {
-    gt::run(spec, backend_t(), grid, out, in, in_tmp, alpha, beta, gamma, fact,
+    gt::run(spec, backend_t(), grid, out, in, alpha, beta, gamma, fact, in_top,
             x_top, z_top, gt::make_global_parameter(delta.z),
             gt::make_global_parameter(dt), gt::make_global_parameter(coeff));
   };
