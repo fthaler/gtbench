@@ -49,7 +49,7 @@ inline grid comm_grid(world &, vec<std::size_t, 3> const &global_resolution,
 inline grid &comm_sub_grid(grid &g, int) { return g; }
 
 std::function<void(storage_t &)>
-comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
+comm_halo_exchanger(grid const &grid, gt::storage::info<3> const &sinfo);
 
 double comm_global_max(grid const &grid, double t);
 

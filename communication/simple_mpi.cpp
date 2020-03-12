@@ -91,12 +91,12 @@ grid::~grid() {
 template <class T> struct halo_info { T lower, upper; };
 
 struct halo_exchange_f {
-  halo_exchange_f(MPI_Comm comm_cart, storage_t::storage_info_t const &sinfo)
+  halo_exchange_f(MPI_Comm comm_cart, gt::storage::info<3> const &sinfo)
       : comm_cart(comm_cart), send_offsets{{0, 0}, {0, 0}}, recv_offsets{
                                                                 {0, 0},
                                                                 {0, 0}} {
     auto strides = sinfo.strides();
-    auto sizes = sinfo.total_lengths();
+    auto sizes = sinfo.lengths();
 
     // sized of halos to exchange along x- and y-axes
     vec<decltype(sizes), 2> halo_sizes;
@@ -159,7 +159,7 @@ struct halo_exchange_f {
 
   void operator()(storage_t &storage) const {
     // storage data pointer
-    real_t *ptr = storage.get_storage_ptr()->get_target_ptr();
+    real_t *ptr = storage->get_target_ptr();
 
     // neighbor ranks along x- and y-axes
     vec<halo_info<int>, 2> nb;
@@ -193,7 +193,7 @@ struct halo_exchange_f {
 
 std::function<void(storage_t &)>
 comm_halo_exchanger(grid const &comm_grid,
-                    storage_t::storage_info_t const &sinfo) {
+                    gt::storage::info<3> const &sinfo) {
   return halo_exchange_f(comm_grid.comm_cart, sinfo);
 }
 
