@@ -9,7 +9,8 @@
  */
 #pragma once
 
-#include <gridtools/stencil_composition/stencil_composition.hpp>
+#include <gridtools/stencil_composition/cartesian.hpp>
+#include <gridtools/stencil_composition/global_parameter.hpp>
 
 #include "../common/types.hpp"
 
@@ -17,7 +18,9 @@ namespace numerics {
 
 using axis_t = gt::axis<1, gt::axis_config::offset_limit<3>>;
 using full_t = axis_t::full_interval;
-using grid_t = gt::grid<axis_t::axis_interval_t>;
+using grid_t = decltype(gt::make_grid(std::declval<gt::halo_descriptor>(),
+                                      std::declval<gt::halo_descriptor>(),
+                                      std::declval<axis_t>()));
 
 using global_parameter_t = gt::global_parameter<real_t>;
 using global_parameter_int_t = gt::global_parameter<gt::int_t>;

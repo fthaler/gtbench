@@ -19,7 +19,7 @@ set_property(CACHE GTBENCH_COMMUNICATION_BACKEND PROPERTY STRINGS "ghex_comm" "s
 
 set(GTBENCH_CUDA_ARCH "sm_60" CACHE STRING "Cuda architecture")
 
-find_package(GridTools 1.1 REQUIRED)
+find_package(GridTools 2.0 REQUIRED)
 
 if(GTBENCH_BACKEND STREQUAL "cuda" AND (NOT DEFINED GRIDTOOLS_CUDA_COMPILATION_TYPE
                                         OR GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA"))
