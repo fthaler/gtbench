@@ -9,10 +9,10 @@
  */
 #pragma once
 
-#include <gridtools/storage/builder.hpp>
-#include <gridtools/storage/x86.hpp>
-#include <gridtools/storage/sid.hpp>
 #include <gridtools/stencil_composition/backend/x86.hpp>
+#include <gridtools/storage/builder.hpp>
+#include <gridtools/storage/sid.hpp>
+#include <gridtools/storage/x86.hpp>
 
 namespace gt = gridtools;
 
@@ -28,8 +28,17 @@ static constexpr gt::int_t halo = 3;
 using backend_t = gt::GTBENCH_BACKEND::backend<>;
 using storage_tr = gt::storage::GTBENCH_BACKEND;
 
-using storage_t = decltype(gt::storage::builder<storage_tr>.type<real_t>().id<0>().halos(halo, halo, 0).dimensions(0, 0, 0)());
-
 template <class T, std::size_t N> struct vec;
 template <class T> struct vec<T, 3> { T x, y, z; };
 template <class T> struct vec<T, 2> { T x, y; };
+
+inline auto storage_builder(vec<std::size_t, 3> const &resolution) {
+  return gt::storage::builder<storage_tr>
+  .type<real_t>()
+  .id<0>()
+  .halos(halo, halo, 0)
+  .dimensions(resolution.x + 2 * halo, resolution.y + 2 * halo, resolution.z + 1);
+}
+
+using storage_t =
+    decltype(storage_builder(std::declval<vec<std::size_t, 3>>())());
