@@ -9,19 +9,18 @@
  */
 #pragma once
 
-#include <gridtools/stencil_composition/expressions/expressions.hpp>
-#include <gridtools/stencil_composition/stencil_composition.hpp>
-#include <gridtools/stencil_composition/stencil_functions.hpp>
+#include <gridtools/stencil_composition/cartesian.hpp>
 
 #include "./computation.hpp"
 
 namespace numerics {
 namespace tridiagonal {
 using gt::extent;
-using gt::in_accessor;
-using gt::inout_accessor;
 using gt::make_param_list;
-using namespace gt::expressions;
+using gt::cartesian::call_proc;
+using gt::cartesian::in_accessor;
+using gt::cartesian::inout_accessor;
+using namespace gt::cartesian::expressions;
 
 struct forward {
   using a = in_accessor<0>;
@@ -81,19 +80,19 @@ struct periodic_forward1 {
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
     eval(b()) -= eval(gamma());
-    gridtools::call_proc<tridiagonal::forward, full_t::first_level>::with(
+    call_proc<tridiagonal::forward, full_t::first_level>::with(
         eval, a(), b(), c(), d());
   }
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
-    gridtools::call_proc<tridiagonal::forward, full_t::modify<1, 0>>::with(
-        eval, a(), b(), c(), d());
+    call_proc<tridiagonal::forward, full_t::modify<1, 0>>::with(eval, a(), b(),
+                                                                c(), d());
   }
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
     eval(b()) -= eval(alpha() * beta() / gamma());
-    gridtools::call_proc<tridiagonal::forward, full_t::modify<1, 0>>::with(
-        eval, a(), b(), c(), d());
+    call_proc<tridiagonal::forward, full_t::modify<1, 0>>::with(eval, a(), b(),
+                                                                c(), d());
   }
 };
 
@@ -121,20 +120,20 @@ struct periodic_forward2 {
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
     eval(u()) = eval(gamma());
-    gridtools::call_proc<tridiagonal::forward, full_t::first_level>::with(
-        eval, a(), b(), c(), u());
+    call_proc<tridiagonal::forward, full_t::first_level>::with(eval, a(), b(),
+                                                               c(), u());
   }
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
     eval(u()) = 0_r;
-    gridtools::call_proc<tridiagonal::forward, full_t::modify<1, 0>>::with(
-        eval, a(), b(), c(), u());
+    call_proc<tridiagonal::forward, full_t::modify<1, 0>>::with(eval, a(), b(),
+                                                                c(), u());
   }
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
     eval(u()) = eval(alpha());
-    gridtools::call_proc<tridiagonal::forward, full_t::modify<1, 0>>::with(
-        eval, a(), b(), c(), u());
+    call_proc<tridiagonal::forward, full_t::modify<1, 0>>::with(eval, a(), b(),
+                                                                c(), u());
   }
 };
 
@@ -157,22 +156,22 @@ struct periodic_backward2 {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
-    gridtools::call_proc<tridiagonal::backward, full_t::modify<0, -1>>::with(
-        eval, z(), c(), d());
+    call_proc<tridiagonal::backward, full_t::modify<0, -1>>::with(eval, z(),
+                                                                  c(), d());
     eval(fact()) = eval((x() + beta() * x_top() / gamma()) /
                         (1_r + z() + beta() * z_top() / gamma()));
   }
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
-    gridtools::call_proc<tridiagonal::backward, full_t::modify<0, -1>>::with(
-        eval, z(), c(), d());
+    call_proc<tridiagonal::backward, full_t::modify<0, -1>>::with(eval, z(),
+                                                                  c(), d());
   }
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
-    gridtools::call_proc<tridiagonal::backward, full_t::last_level>::with(
-        eval, z(), c(), d());
+    call_proc<tridiagonal::backward, full_t::last_level>::with(eval, z(), c(),
+                                                               d());
 
     eval(z_top()) = eval(z());
     eval(x_top()) = eval(x());
