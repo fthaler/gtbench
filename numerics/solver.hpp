@@ -17,16 +17,24 @@ namespace numerics {
 struct solver_state {
   template <class DataInit, class UInit, class VInit, class WInit>
   solver_state(vec<std::size_t, 3> const &resolution, DataInit &&data_init,
-               UInit &&u_init, VInit &&v_init, WInit &&w_init)
-      : sinfo(resolution.x + 2 * halo, resolution.y + 2 * halo,
-              resolution.z + 1),
-        data(sinfo, std::forward<DataInit>(data_init), "data"),
-        u(sinfo, std::forward<UInit>(u_init), "u"),
-        v(sinfo, std::forward<VInit>(v_init), "v"),
-        w(sinfo, std::forward<WInit>(w_init), "w"), data1(sinfo, "data1"),
-        data2(sinfo, "data2") {}
+               UInit &&u_init, VInit &&v_init, WInit &&w_init) {
+    auto builder = storage_builder(resolution);
+    data = builder.name("data").initializer(std::forward<DataInit>(data_init))();
+    u = builder.name("u").initializer(std::forward<UInit>(u_init))();
+    v = builder.name("v").initializer(std::forward<VInit>(v_init))();
+    w = builder.name("w").initializer(std::forward<WInit>(w_init))();
+    data1 = builder.name("data1")();
+    data2 = builder.name("data2")();
+  }
+  /*: sinfo(resolution.x + 2 * halo, resolution.y + 2 * halo,
+          resolution.z + 1),
+    data(sinfo, std::forward<DataInit>(data_init), "data"),
+    u(sinfo, std::forward<UInit>(u_init), "u"),
+    v(sinfo, std::forward<VInit>(v_init), "v"),
+    w(sinfo, std::forward<WInit>(w_init), "w"), data1(sinfo, "data1"),
+    data2(sinfo, "data2") {}*/
+  auto sinfo() const { return data->info(); }
 
-  storage_t::storage_info_t sinfo;
   storage_t data, u, v, w, data1, data2;
 };
 
