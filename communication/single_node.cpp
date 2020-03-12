@@ -19,9 +19,10 @@ struct periodic_boundary {
   template <gt::sign I, gt::sign J, gt::sign K, typename DataField>
   GT_FUNCTION void operator()(gt::direction<I, J, K>, DataField &data,
                               gt::uint_t i, gt::uint_t j, gt::uint_t k) const {
-    auto const &lengths = data.lengths();
-    data(i, j, k) = data((i + lengths[0] - halo) % lengths[1] + halo,
-                         (j + lengths[1] - halo) % lengths[1] + halo, k);
+    auto const inner_size_i = data.lengths()[0] - 2 * halo;
+    auto const inner_size_j = data.lengths()[1] - 2 * halo;
+    data(i, j, k) = data((i + inner_size_i - halo) % inner_size_i + halo,
+                         (j + inner_size_j - halo) % inner_size_j + halo, k);
   }
 };
 
