@@ -9,8 +9,7 @@
  */
 #include "./diffusion.hpp"
 
-#include <gridtools/stencil_composition/expressions/expressions.hpp>
-#include <gridtools/stencil_composition/stencil_functions.hpp>
+#include <gridtools/stencil_composition/cartesian.hpp>
 
 #include "./computation.hpp"
 #include "./tridiagonal.hpp"
@@ -20,10 +19,11 @@ namespace diffusion {
 
 namespace {
 using gt::extent;
-using gt::in_accessor;
-using gt::inout_accessor;
 using gt::make_param_list;
-using namespace gt::expressions;
+using gt::cartesian::call_proc;
+using gt::cartesian::in_accessor;
+using gt::cartesian::inout_accessor;
+using namespace gt::cartesian::expressions;
 
 struct stage_horizontal {
   using out = inout_accessor<0>;
@@ -112,9 +112,8 @@ struct stage_diffusion_w_forward1 {
     eval(alpha()) = eval(beta()) = eval(-coeff() / (2_r * dz() * dz()));
     eval(gamma()) = eval(-b());
 
-    gridtools::call_proc<tridiagonal::periodic_forward1,
-                         full_t::first_level>::with(eval, a(), b(), c(), d(),
-                                                    alpha(), beta(), gamma());
+    call_proc<tridiagonal::periodic_forward1, full_t::first_level>::with(
+        eval, a(), b(), c(), d(), alpha(), beta(), gamma());
 
     eval(data_tmp()) = eval(data());
   }
@@ -128,9 +127,8 @@ struct stage_diffusion_w_forward1 {
              0.5_r * coeff() * (data(0, 0, -1) - 2_r * data() + data(0, 0, 1)) /
                  (dz() * dz()));
 
-    gridtools::call_proc<tridiagonal::periodic_forward1,
-                         full_t::modify<1, -1>>::with(eval, a(), b(), c(), d(),
-                                                      alpha(), beta(), gamma());
+    call_proc<tridiagonal::periodic_forward1, full_t::modify<1, -1>>::with(
+        eval, a(), b(), c(), d(), alpha(), beta(), gamma());
   }
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
@@ -140,9 +138,8 @@ struct stage_diffusion_w_forward1 {
         eval(1_r / dt() * data() +
              0.5_r * coeff() * (data(0, 0, -1) - 2_r * data() + data_tmp()) /
                  (dz() * dz()));
-    gridtools::call_proc<tridiagonal::periodic_forward1,
-                         full_t::last_level>::with(eval, a(), b(), c(), d(),
-                                                   alpha(), beta(), gamma());
+    call_proc<tridiagonal::periodic_forward1, full_t::last_level>::with(
+        eval, a(), b(), c(), d(), alpha(), beta(), gamma());
   }
 };
 
@@ -163,14 +160,14 @@ struct stage_diffusion_w3 {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    gridtools::call_proc<tridiagonal::periodic3, full_t>::with(eval, out(), x(),
-                                                               z(), fact());
+    call_proc<tridiagonal::periodic3, full_t>::with(eval, out(), x(), z(),
+                                                    fact());
   }
 };
 
 } // namespace
 
-horizontal::horizontal(vec<std::size_t, 3> const &resolution,
+/*horizontal::horizontal(vec<std::size_t, 3> const &resolution,
                        vec<real_t, 3> const &delta, real_t coeff)
     : comp_(gt::make_computation<backend_t>(
           computation_grid(resolution.x, resolution.y, resolution.z),
@@ -184,9 +181,22 @@ horizontal::horizontal(vec<std::size_t, 3> const &resolution,
 
 void horizontal::operator()(storage_t &out, storage_t const &in, real_t dt) {
   comp_.run(p_out() = out, p_in() = in, p_dt() = gt::make_global_parameter(dt));
+}*/
+
+std::function<void(storage_t, storage_t, real_t dt)>
+horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
+           real_t coeff) {
+  auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
+  return [grid = std::move(grid), delta, coeff](storage_t out, storage_t in,
+                                                real_t dt) {
+    gt::run_single_stage(
+        stage_horizontal(), backend_t(), grid, out, in,
+        gt::make_global_parameter(delta.x), gt::make_global_parameter(delta.y),
+        gt::make_global_parameter(dt), gt::make_global_parameter(coeff));
+  };
 }
 
-vertical::vertical(vec<std::size_t, 3> const &resolution,
+/*vertical::vertical(vec<std::size_t, 3> const &resolution,
                    vec<real_t, 3> const &delta, real_t coeff)
     : sinfo_ij_(resolution.x + 2 * halo, resolution.y + 2 * halo, 1),
       alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
@@ -244,6 +254,58 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
 void vertical::operator()(storage_t &out, storage_t const &in, real_t dt) {
   comp_.run(p_data_out() = out, p_data_in() = in,
             p_dt() = gt::make_global_parameter(dt));
+}*/
+
+std::function<void(storage_t, storage_t, real_t dt)>
+vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
+         real_t coeff) {
+  auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
+  auto const spec = [](auto out, auto in, auto in_tmp, auto alpha, auto beta,
+                       auto gamma, auto fact, auto x_top, auto z_top, auto dz,
+                       auto dt, auto coeff) {
+    GT_DECLARE_TMP(real_t, a, b, c, d, z, x);
+    return gt::multi_pass(
+        gt::execute_forward().stage(stage_diffusion_w0(), in, in_tmp),
+        gt::execute_forward()
+            .k_cached(gt::cache_io_policy::flush(), a, b, c, d)
+            .stage(stage_diffusion_w_forward1(), alpha, beta, gamma, a, b, c, d,
+                   in, in_tmp, dz, dt, coeff),
+        gt::execute_backward()
+            .k_cached(gt::cache_io_policy::flush(), x)
+            .stage(stage_diffusion_w_backward1(), x, c, d),
+        gt::execute_forward()
+            .k_cached(gt::cache_io_policy::flush(), c, d)
+            .stage(stage_diffusion_w_forward2(), a, b, c, d, alpha, gamma),
+        gt::execute_backward().stage(stage_diffusion_w_backward2(), z, c, d, x,
+                                     beta, gamma, fact, z_top, x_top),
+        gt::execute_parallel().stage(stage_diffusion_w3(), out, x, z, fact, in,
+                                     dt));
+  };
+
+  auto ij_slice = gt::storage::builder<storage_tr>
+    .type<real_t>()
+    .id<1>()
+    .halos(halo, halo)
+    .dimensions(resolution.x + 2 * halo, resolution.y + 2 * halo);
+
+  auto in_tmp = ij_slice();
+  auto alpha = ij_slice();
+  auto beta = ij_slice();
+  auto gamma = ij_slice();
+  auto fact = ij_slice();
+  auto x_top = ij_slice();
+  auto z_top = ij_slice();
+
+  return [grid = std::move(grid), spec = std::move(spec),
+          in_tmp = std::move(in_tmp), alpha = std::move(alpha),
+          beta = std::move(beta), gamma = std::move(gamma),
+          fact = std::move(fact), x_top = std::move(x_top),
+          z_top = std::move(z_top), delta,
+          coeff](storage_t out, storage_t in, real_t dt) {
+    gt::run(spec, backend_t(), grid, out, in, in_tmp, alpha, beta, gamma, fact,
+            x_top, z_top, gt::make_global_parameter(delta.z),
+            gt::make_global_parameter(dt), gt::make_global_parameter(coeff));
+  };
 }
 
 } // namespace diffusion

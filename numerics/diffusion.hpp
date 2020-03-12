@@ -9,12 +9,14 @@
  */
 #pragma once
 
+#include <functional>
+
 #include "./computation.hpp"
 
 namespace numerics {
 namespace diffusion {
 
-class horizontal {
+/*class horizontal {
   using p_out = gt::arg<0, storage_t>;
   using p_in = gt::arg<1, storage_t>;
   using p_dx = gt::arg<2, global_parameter_t>;
@@ -29,10 +31,14 @@ public:
   void operator()(storage_t &out, storage_t const &in, real_t dt);
 
 private:
-  gt::computation<p_out, p_in, p_dt> comp_;
-};
+  std::function<void(storage_t, storage_t, global_parameter_t)> comp_;
+};*/
 
-class vertical {
+std::function<void(storage_t, storage_t, real_t dt)>
+    horizontal(vec<std::size_t, 3> const &resolution,
+               vec<real_t, 3> const &delta, real_t coeff);
+
+/*class vertical {
   storage_ij_t::storage_info_t sinfo_ij_;
 
   using p_data_in = gt::arg<0, storage_t>;
@@ -75,7 +81,11 @@ public:
 
 private:
   gt::computation<p_data_in, p_data_out, p_dt> comp_;
-};
+};*/
+
+std::function<void(storage_t, storage_t, real_t dt)>
+    vertical(vec<std::size_t, 3> const &resolution,
+               vec<real_t, 3> const &delta, real_t coeff);
 
 } // namespace diffusion
 } // namespace numerics
