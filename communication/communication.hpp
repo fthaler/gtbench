@@ -58,7 +58,7 @@ decltype(auto) sub_grid(CommGrid &&grid,
 }
 
 template <class CommGrid>
-auto halo_exchanger(CommGrid &&grid, storage_t::storage_info_t const &sinfo) {
+auto halo_exchanger(CommGrid &&grid, gt::storage::info<3> const &sinfo) {
   return comm_halo_exchanger(std::forward<CommGrid>(grid), sinfo);
 }
 

@@ -36,7 +36,7 @@ inline vec<std::size_t, 3> comm_global_resolution(grid const &grid) {
 constexpr vec<std::size_t, 2> comm_offset(grid) { return {0, 0}; }
 
 std::function<void(storage_t &)>
-comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
+comm_halo_exchanger(grid const &grid, gt::storage::info<3> const &sinfo);
 
 template <class T> constexpr T comm_global_max(grid, T const &t) { return t; }
 
