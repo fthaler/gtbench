@@ -17,7 +17,7 @@ namespace communication {
 namespace ghex_comm {
 
 std::function<void(storage_t &)>
-comm_halo_exchanger(grid::sub_grid &g, storage_t::storage_info_t const &sinfo) {
+comm_halo_exchanger(grid::sub_grid &g, gt::storage::info<3> const &sinfo) {
   auto co_ptr = g.m_comm_obj.get();
   auto patterns_ptr = g.m_patterns;
   const auto domain_id = g.m_domain_id;

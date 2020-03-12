@@ -379,7 +379,7 @@ inline grid::sub_grid comm_sub_grid(grid &grid, int id = 0) { return grid[id]; }
 
 std::function<void(storage_t &)>
 comm_halo_exchanger(grid::sub_grid &grid,
-                    storage_t::storage_info_t const &sinfo);
+                    gt::storage::info<3> const &sinfo);
 
 double comm_global_max(grid::sub_grid const &grid, double t);
 
