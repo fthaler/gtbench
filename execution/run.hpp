@@ -77,7 +77,7 @@ result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
 
   const vec<real_t, 3> delta = initial.delta;
 
-  auto exchange = communication::halo_exchanger(comm_grid, state.sinfo);
+  auto exchange = communication::halo_exchanger(comm_grid, state.sinfo());
 
   auto step = stepper(n, delta, exchange);
 
@@ -93,8 +93,7 @@ result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
   double time = timer::duration(start, stop);
   communication::barrier(comm_grid);
 
-  state.data.sync();
-  auto view = gt::make_host_view(state.data);
+  auto view = state.data->const_host_view();
 
   auto expected = on_domain(exact, communication::global_resolution(comm_grid),
                             communication::offset(comm_grid), t)
