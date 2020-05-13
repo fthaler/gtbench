@@ -9,10 +9,10 @@
  */
 #pragma once
 
-#include <gridtools/stencil_composition/backend/x86.hpp>
+#include <gridtools/stencil/cpu_ifirst.hpp>
 #include <gridtools/storage/builder.hpp>
 #include <gridtools/storage/sid.hpp>
-#include <gridtools/storage/x86.hpp>
+#include <gridtools/storage/cpu_ifirst.hpp>
 
 namespace gt = gridtools;
 
@@ -25,7 +25,7 @@ constexpr real_t operator"" _r(unsigned long long value) {
 
 static constexpr gt::int_t halo = 3;
 
-using backend_t = gt::GTBENCH_BACKEND::backend<>;
+using backend_t = gt::stencil::GTBENCH_BACKEND<>;
 using storage_tr = gt::storage::GTBENCH_BACKEND;
 
 template <class T, std::size_t N> struct vec;

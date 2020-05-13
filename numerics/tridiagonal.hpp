@@ -9,18 +9,18 @@
  */
 #pragma once
 
-#include <gridtools/stencil_composition/cartesian.hpp>
+#include <gridtools/stencil/cartesian.hpp>
 
 #include "./computation.hpp"
 
 namespace numerics {
 namespace tridiagonal {
-using gt::extent;
-using gt::make_param_list;
-using gt::cartesian::call_proc;
-using gt::cartesian::in_accessor;
-using gt::cartesian::inout_accessor;
-using namespace gt::cartesian::expressions;
+using gt::stencil::extent;
+using gt::stencil::make_param_list;
+using gt::stencil::cartesian::call_proc;
+using gt::stencil::cartesian::in_accessor;
+using gt::stencil::cartesian::inout_accessor;
+using namespace gt::stencil::cartesian::expressions;
 
 struct forward {
   using a = in_accessor<0>;

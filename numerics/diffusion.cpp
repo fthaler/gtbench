@@ -9,7 +9,7 @@
  */
 #include "./diffusion.hpp"
 
-#include <gridtools/stencil_composition/cartesian.hpp>
+#include <gridtools/stencil/cartesian.hpp>
 
 #include "./computation.hpp"
 #include "./tridiagonal.hpp"
@@ -18,12 +18,12 @@ namespace numerics {
 namespace diffusion {
 
 namespace {
-using gt::extent;
-using gt::make_param_list;
-using gt::cartesian::call_proc;
-using gt::cartesian::in_accessor;
-using gt::cartesian::inout_accessor;
-using namespace gt::cartesian::expressions;
+using gt::stencil::extent;
+using gt::stencil::make_param_list;
+using gt::stencil::cartesian::call_proc;
+using gt::stencil::cartesian::in_accessor;
+using gt::stencil::cartesian::inout_accessor;
+using namespace gt::stencil::cartesian::expressions;
 
 struct stage_horizontal {
   using out = inout_accessor<0>;
@@ -173,10 +173,10 @@ horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
   return [grid = std::move(grid), delta, coeff](storage_t out, storage_t in,
                                                 real_t dt) {
-    gt::run_single_stage(
+    gt::stencil::run_single_stage(
         stage_horizontal(), backend_t(), grid, out, in,
-        gt::make_global_parameter(delta.x), gt::make_global_parameter(delta.y),
-        gt::make_global_parameter(dt), gt::make_global_parameter(coeff));
+        gt::stencil::make_global_parameter(delta.x), gt::stencil::make_global_parameter(delta.y),
+        gt::stencil::make_global_parameter(dt), gt::stencil::make_global_parameter(coeff));
   };
 }
 
@@ -188,21 +188,21 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
                        auto fact, auto in_top, auto x_top, auto z_top, auto dz,
                        auto dt, auto coeff) {
     GT_DECLARE_TMP(real_t, a, b, c, d, z, x);
-    return gt::multi_pass(
-        gt::execute_forward().stage(stage_diffusion_w0(), in, in_top),
-        gt::execute_forward()
-            .k_cached(gt::cache_io_policy::flush(), a, b, c, d)
+    return gt::stencil::multi_pass(
+        gt::stencil::execute_forward().stage(stage_diffusion_w0(), in, in_top),
+        gt::stencil::execute_forward()
+            .k_cached(gt::stencil::cache_io_policy::flush(), a, b, c, d)
             .stage(stage_diffusion_w_forward1(), alpha, beta, gamma, a, b, c, d,
                    in, in_top, dz, dt, coeff),
-        gt::execute_backward()
-            .k_cached(gt::cache_io_policy::flush(), x)
+        gt::stencil::execute_backward()
+            .k_cached(gt::stencil::cache_io_policy::flush(), x)
             .stage(stage_diffusion_w_backward1(), x, c, d),
-        gt::execute_forward()
-            .k_cached(gt::cache_io_policy::flush(), c, d)
+        gt::stencil::execute_forward()
+            .k_cached(gt::stencil::cache_io_policy::flush(), c, d)
             .stage(stage_diffusion_w_forward2(), a, b, c, d, alpha, gamma),
-        gt::execute_backward().stage(stage_diffusion_w_backward2(), z, c, d, x,
+        gt::stencil::execute_backward().stage(stage_diffusion_w_backward2(), z, c, d, x,
                                      beta, gamma, fact, z_top, x_top),
-        gt::execute_parallel().stage(stage_diffusion_w3(), out, x, z, fact, in,
+        gt::stencil::execute_parallel().stage(stage_diffusion_w3(), out, x, z, fact, in,
                                      dt));
   };
 
@@ -226,9 +226,9 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
           in_top = std::move(in_top), x_top = std::move(x_top),
           z_top = std::move(z_top), delta,
           coeff](storage_t out, storage_t in, real_t dt) {
-    gt::run(spec, backend_t(), grid, out, in, alpha, beta, gamma, fact, in_top,
-            x_top, z_top, gt::make_global_parameter(delta.z),
-            gt::make_global_parameter(dt), gt::make_global_parameter(coeff));
+    gt::stencil::run(spec, backend_t(), grid, out, in, alpha, beta, gamma, fact, in_top,
+            x_top, z_top, gt::stencil::make_global_parameter(delta.z),
+            gt::stencil::make_global_parameter(dt), gt::stencil::make_global_parameter(coeff));
   };
 }
 

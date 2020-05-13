@@ -7,18 +7,19 @@
  * Please, refer to the LICENSE file in the root directory.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-#include "./single_node.hpp"
+#include "./run.hpp"
 
-#include <gridtools/boundary_conditions/boundary.hpp>
+#include <gridtools/boundaries/boundary.hpp>
 
-namespace communication {
-
-namespace single_node {
+namespace runtime {
+namespace single_node_impl {
 
 struct periodic_boundary {
-  template <gt::sign I, gt::sign J, gt::sign K, typename DataField>
-  GT_FUNCTION void operator()(gt::direction<I, J, K>, DataField &data,
-                              gt::uint_t i, gt::uint_t j, gt::uint_t k) const {
+  template <gt::boundaries::sign I, gt::boundaries::sign J,
+            gt::boundaries::sign K, typename DataField>
+  GT_FUNCTION void operator()(gt::boundaries::direction<I, J, K>,
+                              DataField &data, gt::uint_t i, gt::uint_t j,
+                              gt::uint_t k) const {
     auto const inner_size_i = data.lengths()[0] - 2 * halo;
     auto const inner_size_j = data.lengths()[1] - 2 * halo;
     data(i, j, k) = data((i + inner_size_i - halo) % inner_size_i + halo,
@@ -26,24 +27,21 @@ struct periodic_boundary {
   }
 };
 
-std::function<void(storage_t &)>
-comm_halo_exchanger(grid const &grid, gt::storage::info<3> const &sinfo) {
-  gt::uint_t nx = grid.resolution.x;
-  gt::uint_t ny = grid.resolution.y;
-  gt::uint_t nz = grid.resolution.z;
+numerics::exchange_t exchange_func(vec<std::size_t, 3> const &resolution) {
+  gt::uint_t nx = resolution.x;
+  gt::uint_t ny = resolution.y;
+  gt::uint_t nz = resolution.z;
   const gt::array<gt::halo_descriptor, 3> halos{
       {{halo, halo, halo, halo + nx - 1, halo + nx + halo},
        {halo, halo, halo, halo + ny - 1, halo + ny + halo},
        {0, 0, 0, nz - 1, nz}}};
-  gt::boundary<periodic_boundary, backend_t> boundary(halos,
-                                                      periodic_boundary());
+  gt::boundaries::boundary<periodic_boundary, backend_t> boundary(
+      halos, periodic_boundary());
+
   return [boundary = std::move(boundary)](storage_t &storage) {
     boundary.apply(storage);
   };
 }
 
-void comm_barrier(grid &) {}
-
-} // namespace single_node
-
-} // namespace communication
+} // namespace single_node_impl
+} // namespace runtime
